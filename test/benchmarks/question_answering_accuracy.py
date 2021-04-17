@@ -21,7 +21,7 @@ from farm.train import Trainer
 from farm.utils import set_all_seeds, initialize_device_settings
 
 
-def test_evaluation():
+def _test_evaluation():
     ##########################
     ########## Settings
     ##########################
@@ -40,11 +40,11 @@ def test_evaluation():
     model.prediction_heads[0].no_ans_boost = 0
     model.prediction_heads[0].n_best = 1
 
-    tokenizer = Tokenizer.load(pretrained_model_name_or_path=lang_model,do_lower_case=do_lower_case)
+    tokenizer = Tokenizer.load(pretrained_model_name_or_path=lang_model, do_lower_case=do_lower_case)
     processor = SquadProcessor(
         tokenizer=tokenizer,
         max_seq_len=256,
-        label_list= ["start_token", "end_token"],
+        label_list=["start_token", "end_token"],
         metric="squad",
         train_filename=None,
         dev_filename=None,
@@ -56,9 +56,10 @@ def test_evaluation():
 
     starttime = time()
 
-    data_silo = DataSilo(processor=processor, batch_size=40*4)
+    data_silo = DataSilo(processor=processor, batch_size=40 * 4)
     model.connect_heads_with_processor(data_silo.processor.tasks, require_labels=True)
-    model, _ = optimize_model(model=model, device=device, local_rank=-1, optimizer=None, distributed=False, use_amp=None)
+    model, _ = optimize_model(model=model, device=device, local_rank=-1, optimizer=None, distributed=False,
+                              use_amp=None)
 
     evaluator = Evaluator(data_loader=data_silo.get_data_loader("test"), tasks=data_silo.processor.tasks, device=device)
 
@@ -73,18 +74,22 @@ def test_evaluation():
 
     gold_EM = 0.784721
     gold_f1 = 0.826671
-    gold_tnacc = 0.843594 # top 1 recall
-    gold_elapsed = 40 # 4x V100
+    gold_tnacc = 0.843594  # top 1 recall
+    gold_elapsed = 40  # 4x V100
     if test_assertions:
-        np.testing.assert_allclose(em_score, gold_EM, rtol=0.001, err_msg=f"FARM Eval changed for EM by: {em_score-gold_EM}")
-        np.testing.assert_allclose(f1_score, gold_f1, rtol=0.001, err_msg=f"FARM Eval changed for f1 score by: {f1_score-gold_f1}")
-        np.testing.assert_allclose(tnacc, gold_tnacc, rtol=0.001, err_msg=f"FARM Eval changed for top 1 accuracy by: {em_score-gold_EM}")
-        np.testing.assert_allclose(elapsed, gold_elapsed, rtol=0.1, err_msg=f"FARM Eval speed changed significantly by: {elapsed - gold_elapsed} seconds")
-
+        np.testing.assert_allclose(em_score, gold_EM, rtol=0.001,
+                                   err_msg=f"FARM Eval changed for EM by: {em_score - gold_EM}")
+        np.testing.assert_allclose(f1_score, gold_f1, rtol=0.001,
+                                   err_msg=f"FARM Eval changed for f1 score by: {f1_score - gold_f1}")
+        np.testing.assert_allclose(tnacc, gold_tnacc, rtol=0.001,
+                                   err_msg=f"FARM Eval changed for top 1 accuracy by: {em_score - gold_EM}")
+        np.testing.assert_allclose(elapsed, gold_elapsed, rtol=0.1,
+                                   err_msg=f"FARM Eval speed changed significantly by: {elapsed - gold_elapsed} seconds")
 
     # # 2. Test FARM predictions with outside eval script
     starttime = time()
-    model = Inferencer(model=model, processor=processor, task_type="question_answering", batch_size=40*4, gpu=device.type=="cuda")
+    model = Inferencer(model=model, processor=processor, task_type="question_answering", batch_size=40 * 4,
+                       gpu=device.type == "cuda")
     filename = data_dir / evaluation_filename
     result = model.inference_from_file(file=filename, return_json=False, multiprocessing_chunksize=80)
     results_squad = [x.to_squad_eval() for x in result]
@@ -99,19 +104,17 @@ def test_evaluation():
         out_filename="testsave/predictions.json"
     )
     script_params = {"data_file": filename,
-              "pred_file": "testsave/predictions.json",
-              "na_prob_thresh" : 1,
-              "na_prob_file": False,
-              "out_file": False}
+                     "pred_file": "testsave/predictions.json",
+                     "na_prob_thresh": 1,
+                     "na_prob_file": False,
+                     "out_file": False}
     results_official = squad_evaluation.main(OPTS=DotMap(script_params))
     f1_score = results_official["f1"]
     em_score = results_official["exact"]
 
-
-
     gold_EM = 79.878
     gold_f1 = 82.917
-    gold_elapsed = 27 # 4x V100
+    gold_elapsed = 27  # 4x V100
     print(elapsed)
     if test_assertions:
         np.testing.assert_allclose(em_score, gold_EM, rtol=0.001,
@@ -130,14 +133,13 @@ def train_evaluation_single(seed=42):
     device, n_gpu = initialize_device_settings(use_cuda=True)
     # GPU utilization on 4x V100
     # 40*4, 14.3/16GB on master, 12.6/16 on others
-    batch_size = 40*4
+    batch_size = 1  # 40*4
     n_epochs = 2
-    evaluate_every = 2000000 # disabling dev eval
+    evaluate_every = 2000000  # disabling dev eval
     lang_model = "roberta-base"
     do_lower_case = False  # roberta is a cased model
     train_filename = "train-v2.0.json"
     dev_filename = "dev-v2.0.json"
-
 
     # Load model and train
     tokenizer = Tokenizer.load(
@@ -200,10 +202,9 @@ def train_evaluation_single(seed=42):
     print(results)
     print(elapsed)
 
-
     gold_f1 = 82.155
     gold_EM = 77.714
-    gold_tnrecall = 97.3721 #
+    gold_tnrecall = 97.3721  #
     gold_elapsed = 1135
     np.testing.assert_allclose(f1_score, gold_f1, rtol=0.01,
                                err_msg=f"FARM Training changed for f1 score by: {f1_score - gold_f1}")
@@ -211,11 +212,13 @@ def train_evaluation_single(seed=42):
                                err_msg=f"FARM Training changed for EM by: {em_score - gold_EM}")
     np.testing.assert_allclose(tnacc, gold_tnrecall, rtol=0.01,
                                err_msg=f"FARM Training changed for top 5 accuracy by: {em_score - gold_EM}")
-    np.testing.assert_allclose(elapsed, gold_elapsed, rtol=0.1, err_msg=f"FARM Training speed changed significantly by: {elapsed - gold_elapsed} seconds")
+    np.testing.assert_allclose(elapsed, gold_elapsed, rtol=0.1,
+                               err_msg=f"FARM Training speed changed significantly by: {elapsed - gold_elapsed} seconds")
+
 
 if __name__ == "__main__":
-    logging.disable(logging.WARNING)
+    # logging.disable(logging.WARNING)
 
-    test_evaluation()
+    # test_evaluation()
 
     train_evaluation_single(seed=42)
