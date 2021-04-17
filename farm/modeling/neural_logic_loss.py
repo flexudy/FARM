@@ -6,6 +6,8 @@ class QuestionAnsweringNeuralFuzzyLogicLoss(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
     def forward(self, start_logits, start_positions, end_logits, end_positions):
         # Create an empty tensor of zeros to later use it for one hot encoding
 
@@ -18,6 +20,10 @@ class QuestionAnsweringNeuralFuzzyLogicLoss(torch.nn.Module):
         start_position_one_hot[torch.arange(start_logits.size(0)), start_positions] = 1.0
 
         end_position_one_hot[torch.arange(end_logits.size(0)), end_positions] = 1.0
+
+        start_position_one_hot = start_position_one_hot.to(self.device)
+
+        end_position_one_hot = end_position_one_hot.to(self.device)
 
         # Get predictions
 
@@ -51,6 +57,6 @@ class QuestionAnsweringNeuralFuzzyLogicLoss(torch.nn.Module):
 
         # Standard mean squared error
 
-        loss = F.mse_loss(verum_interpretation, start_interpretations)
+        loss = F.mse_loss(tokens_interpretations, verum_interpretation.to(self.device))
 
         return loss
