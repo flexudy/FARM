@@ -1059,8 +1059,13 @@ class QuestionAnsweringHead(PredictionHead):
         start_position.clamp_(0, ignored_index)
         end_position.clamp_(0, ignored_index)
 
-        loss_fct = QuestionAnsweringNeuralFuzzyLogicLoss()
-        per_sample_loss = loss_fct(start_logits, start_position, end_logits, end_position)
+        loss_fct = CrossEntropyLoss(reduction="none")
+        start_loss = loss_fct(start_logits, start_position)
+        end_loss = loss_fct(end_logits, end_position)
+        per_sample_loss = (start_loss + end_loss) / 2
+
+        fuzzy_loss_fct = QuestionAnsweringNeuralFuzzyLogicLoss()
+        per_sample_loss += fuzzy_loss_fct(start_logits, start_position, end_logits, end_position)
         return per_sample_loss
 
     def temperature_scale(self, logits):

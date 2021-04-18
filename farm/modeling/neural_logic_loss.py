@@ -41,11 +41,11 @@ class QuestionAnsweringNeuralFuzzyLogicLoss(torch.nn.Module):
 
         # First apply the combination function across the labels. Start ∧ End for each token
 
-        tokens_interpretations = torch.minimum(start_interpretations, end_interpretations)  # Zadeh T-Norm
+        tokens_interpretations = start_interpretations * end_interpretations  # Product Logic T-Norm
 
         # Then compute the combination function across all tokens. token_0 ∧ token_1 ∧ ... ∧ token_i-1 ∧ token_i
 
-        tokens_interpretations, _ = torch.min(tokens_interpretations, dim=1, keepdim=True)
+        tokens_interpretations = torch.prod(tokens_interpretations, dim=1, keepdim=True)
 
         # Scale the interpretations because i love looking at values greater than 1
 
